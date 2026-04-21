@@ -1,0 +1,121 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/hex_grid.gd" id="2_hex"]
+[ext_resource type="Script" path="res://scripts/game_manager.gd" id="3_gm"]
+[ext_resource type="Script" path="res://scripts/enemy_ai.gd" id="4_ai"]
+[ext_resource type="Script" path="res://scripts/ui_manager.gd" id="5_ui"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="HexGrid" type="TileMapLayer" parent="."]
+script = ExtResource("2_hex")
+
+[node name="GameManager" type="Node" parent="."]
+script = ExtResource("3_gm")
+
+[node name="EnemyAI" type="Node" parent="."]
+script = ExtResource("4_ai")
+
+[node name="UIManager" type="CanvasLayer" parent="."]
+script = ExtResource("5_ui")
+
+[node name="TopBar" type="PanelContainer" parent="UIManager"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 52.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UIManager/TopBar"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+
+[node name="TurnLabel" type="Label" parent="UIManager/TopBar/HBoxContainer"]
+text = "TURN 1"
+
+[node name="SupplyLabel" type="Label" parent="UIManager/TopBar/HBoxContainer"]
+text = "SUPPLY : 12"
+
+[node name="APLabel" type="Label" parent="UIManager/TopBar/HBoxContainer"]
+text = "AP : 3"
+
+[node name="Spacer" type="Control" parent="UIManager/TopBar/HBoxContainer"]
+size_flags_horizontal = 3
+
+[node name="EndTurnButton" type="Button" parent="UIManager/TopBar/HBoxContainer"]
+text = "End Turn"
+
+[node name="MenuButton" type="Button" parent="UIManager/TopBar/HBoxContainer"]
+text = "Menu"
+
+[node name="Sidebar" type="PanelContainer" parent="UIManager"]
+visible = false
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_top = 58.0
+offset_right = 300.0
+offset_bottom = -8.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UIManager/Sidebar"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+
+[node name="UnitPortrait" type="ColorRect" parent="UIManager/Sidebar/VBoxContainer"]
+custom_minimum_size = Vector2(0, 96)
+color = Color(0.18, 0.18, 0.18, 1)
+
+[node name="UnitNameLabel" type="Label" parent="UIManager/Sidebar/VBoxContainer"]
+text = "Unit"
+
+[node name="HealthLabel" type="Label" parent="UIManager/Sidebar/VBoxContainer"]
+text = "HEALTH      0 / 0"
+
+[node name="MovementLabel" type="Label" parent="UIManager/Sidebar/VBoxContainer"]
+text = "MOVEMENT  0 / 0"
+
+[node name="MoveButton" type="Button" parent="UIManager/Sidebar/VBoxContainer"]
+text = "Move"
+
+[node name="AttackButton" type="Button" parent="UIManager/Sidebar/VBoxContainer"]
+text = "Attack"
+
+[node name="FortifyButton" type="Button" parent="UIManager/Sidebar/VBoxContainer"]
+text = "Fortify"
+
+[node name="GameOverPanel" type="PanelContainer" parent="UIManager"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -170.0
+offset_top = -90.0
+offset_right = 170.0
+offset_bottom = 90.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UIManager/GameOverPanel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = -12.0
+
+[node name="ResultLabel" type="Label" parent="UIManager/GameOverPanel/VBoxContainer"]
+horizontal_alignment = 1
+text = "MISSION COMPLETE"
+
+[node name="RestartButton" type="Button" parent="UIManager/GameOverPanel/VBoxContainer"]
+text = "Restart"
