@@ -30,6 +30,7 @@ signal move_pressed
 signal attack_pressed
 signal fortify_pressed
 signal end_turn_pressed
+signal menu_pressed
 
 # ─── Node refs ────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ signal end_turn_pressed
 @onready var supply_label: Label     = $TopBar/HBoxContainer/SupplyLabel
 @onready var ap_label: Label         = $TopBar/HBoxContainer/APLabel
 @onready var end_turn_btn: Button    = $TopBar/HBoxContainer/EndTurnButton
+@onready var menu_btn: Button        = get_node_or_null("TopBar/HBoxContainer/MenuButton")
 
 @onready var sidebar: PanelContainer = $Sidebar
 @onready var unit_name_label: Label  = $Sidebar/VBoxContainer/UnitNameLabel
@@ -49,16 +51,128 @@ signal end_turn_pressed
 @onready var game_over_panel: PanelContainer = $GameOverPanel
 @onready var result_label: Label             = $GameOverPanel/VBoxContainer/ResultLabel
 
+var pause_overlay: ColorRect = ColorRect.new()
+var pause_panel: PanelContainer = PanelContainer.new()
+var _cached_button_states: Dictionary = {}
+
 # ─── Ready ────────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	move_btn.pressed.connect(func(): emit_signal("move_pressed"))
 	attack_btn.pressed.connect(func(): emit_signal("attack_pressed"))
 	fortify_btn.pressed.connect(func(): emit_signal("fortify_pressed"))
 	end_turn_btn.pressed.connect(func(): emit_signal("end_turn_pressed"))
+	if menu_btn != null:
+		menu_btn.pressed.connect(_on_menu_pressed)
+	_setup_pause_menu()
 	$GameOverPanel/VBoxContainer/RestartButton.pressed.connect(_on_restart)
 	hide_unit_panel()
 	game_over_panel.visible = false
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if pause_overlay.visible:
+			_hide_pause_menu()
+		else:
+			_on_menu_pressed()
+		get_viewport().set_input_as_handled()
+
+func _setup_pause_menu() -> void:
+	pause_overlay.name = "PauseOverlay"
+	pause_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_overlay.visible = false
+	pause_overlay.color = Color(0, 0, 0, 0.45)
+	pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(pause_overlay)
+
+	pause_panel.name = "PausePanel"
+	pause_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pause_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+	var container := VBoxContainer.new()
+	container.custom_minimum_size = Vector2(260, 0)
+	container.add_theme_constant_override("separation", 8)
+
+	var title := Label.new()
+	title.text = "Mission Menu"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	container.add_child(title)
+	container.add_child(HSeparator.new())
+
+	var resume_btn := Button.new()
+	resume_btn.text = "Resume"
+	resume_btn.pressed.connect(_on_resume_pressed)
+	container.add_child(resume_btn)
+
+	var restart_btn := Button.new()
+	restart_btn.text = "Restart Mission"
+	restart_btn.pressed.connect(_on_restart_pressed)
+	container.add_child(restart_btn)
+
+	var quit_btn := Button.new()
+	quit_btn.text = "Quit Game"
+	quit_btn.pressed.connect(_on_quit_pressed)
+	container.add_child(quit_btn)
+
+	pause_panel.add_child(container)
+	pause_overlay.add_child(pause_panel)
+	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
+	pause_panel.offset_left = -140
+	pause_panel.offset_top = -90
+	pause_panel.offset_right = 140
+	pause_panel.offset_bottom = 90
+
+func _on_menu_pressed() -> void:
+	emit_signal("menu_pressed")
+	if pause_overlay.visible:
+		_hide_pause_menu()
+		return
+	_show_pause_menu()
+
+func _show_pause_menu() -> void:
+	_capture_and_disable_gameplay_buttons()
+	pause_overlay.visible = true
+	get_tree().paused = true
+
+func _hide_pause_menu() -> void:
+	pause_overlay.visible = false
+	_restore_gameplay_buttons()
+	if get_tree() != null:
+		get_tree().paused = false
+
+func _capture_and_disable_gameplay_buttons() -> void:
+	_cached_button_states = {
+		"end_turn": end_turn_btn.disabled,
+		"move": move_btn.disabled,
+		"attack": attack_btn.disabled,
+		"fortify": fortify_btn.disabled
+	}
+	end_turn_btn.disabled = true
+	move_btn.disabled = true
+	attack_btn.disabled = true
+	fortify_btn.disabled = true
+
+func _restore_gameplay_buttons() -> void:
+	if _cached_button_states.is_empty():
+		return
+	end_turn_btn.disabled = _cached_button_states.get("end_turn", true)
+	move_btn.disabled = _cached_button_states.get("move", true)
+	attack_btn.disabled = _cached_button_states.get("attack", true)
+	fortify_btn.disabled = _cached_button_states.get("fortify", true)
+	_cached_button_states.clear()
+
+func _on_resume_pressed() -> void:
+	_hide_pause_menu()
+
+func _on_restart_pressed() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+func _on_quit_pressed() -> void:
+	get_tree().paused = false
+	get_tree().quit()
 
 # ─── Top Bar ──────────────────────────────────────────────────────────────────
 
