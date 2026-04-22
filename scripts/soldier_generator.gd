@@ -51,7 +51,7 @@ const BACKSTORIES = [
 	"Good at cards. Too good. You wonder how.",
 ]
 
-var RANKS_BY_TYPE: Dictionary = {
+const RANKS_BY_TYPE: Dictionary = {
 	Globals.UnitType.RIFLEMAN:       ["Pvt.", "PFC", "Cpl."],
 	Globals.UnitType.GRENADIER:      ["PFC", "Cpl.", "Sgt."],
 	Globals.UnitType.RECON:          ["Cpl.", "Sgt."],
@@ -106,7 +106,7 @@ const LETTERS_HOME = [
 
 # ─── Generation ───────────────────────────────────────────────────────────────
 
-func generate(unit_type: int) -> Soldier:
+static func generate(unit_type: int) -> Soldier:
 	var s := Soldier.new()
 	s.first_name = FIRST_NAMES.pick_random()
 	s.last_name  = LAST_NAMES.pick_random()
@@ -115,6 +115,8 @@ func generate(unit_type: int) -> Soldier:
 	s.rank       = RANKS_BY_TYPE.get(unit_type, ["Pvt."])[randi() % RANKS_BY_TYPE.get(unit_type, ["Pvt."]).size()]
 	s.morale     = 5
 	s.max_morale = 5
+	s.primary_role = unit_type
+	s.portrait_id = randi() % 12
 
 	# Attach a personality (stored as a trait for simplicity)
 	var personality: Dictionary = PERSONALITIES.pick_random()
@@ -122,6 +124,6 @@ func generate(unit_type: int) -> Soldier:
 
 	return s
 
-func random_letter(soldier_name: String) -> String:
+static func random_letter(soldier_name: String) -> String:
 	var template: String = LETTERS_HOME.pick_random()
 	return template % soldier_name

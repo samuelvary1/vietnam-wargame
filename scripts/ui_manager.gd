@@ -41,6 +41,7 @@ signal menu_pressed
 @onready var menu_btn: Button        = get_node_or_null("TopBar/HBoxContainer/MenuButton")
 
 @onready var sidebar: PanelContainer = $Sidebar
+@onready var unit_portrait: ColorRect = $Sidebar/VBoxContainer/UnitPortrait
 @onready var unit_name_label: Label  = $Sidebar/VBoxContainer/UnitNameLabel
 @onready var health_label: Label     = $Sidebar/VBoxContainer/HealthLabel
 @onready var movement_label: Label   = $Sidebar/VBoxContainer/MovementLabel
@@ -192,7 +193,19 @@ func set_end_turn_button_enabled(enabled: bool) -> void:
 
 func show_unit_panel(unit: Node, can_move_now: bool = true, can_attack_now: bool = true, can_fortify_now: bool = true) -> void:
 	sidebar.visible = true
+	unit_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	unit_name_label.text = unit.unit_display_name
+	unit_portrait.color = unit.get_portrait_color()
+	if unit.has_method("get_soldier"):
+		var soldier: Soldier = unit.get_soldier()
+		if soldier != null:
+			unit_name_label.text = "%s\n%s\n\"%s\"\nXP %d (%s)" % [
+				soldier.full_name(),
+				soldier.hometown,
+				soldier.backstory,
+				soldier.experience,
+				soldier.experience_label()
+			]
 	health_label.text    = "HEALTH      %d / %d" % [unit.current_health, unit.max_health]
 	movement_label.text  = "MOVEMENT  %d / %d" % [unit.current_movement, unit.max_movement]
 	move_btn.disabled    = not can_move_now

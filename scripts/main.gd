@@ -20,6 +20,15 @@ var action_mode: String = ""   # "move" | "attack" | ""
 # ─── Init ─────────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
+	_show_splash()
+
+func _show_splash() -> void:
+	var splash := preload("res://scenes/SplashScreen.tscn").instantiate()
+	add_child(splash)
+	splash.splash_finished.connect(_start_game)
+
+func _start_game() -> void:
+	Campaign.ensure_campaign_started()
 	_connect_signals()
 	_spawn_starting_units()
 	game_manager.start_player_turn()
@@ -46,12 +55,7 @@ func _connect_signals() -> void:
 # ─── Unit Spawning ────────────────────────────────────────────────────────────
 
 func _spawn_starting_units() -> void:
-	# US units (left side of map)
-	_spawn_unit(Vector2i(-3,  0), Globals.Team.US, Globals.UnitType.RIFLEMAN)
-	_spawn_unit(Vector2i(-3,  1), Globals.Team.US, Globals.UnitType.RIFLEMAN)
-	_spawn_unit(Vector2i(-4,  1), Globals.Team.US, Globals.UnitType.M113)
-	_spawn_unit(Vector2i(-3, -1), Globals.Team.US, Globals.UnitType.RECON)
-	_spawn_unit(Vector2i(-4,  0), Globals.Team.US, Globals.UnitType.MEDIC)
+	_spawn_player_patrol()
 
 	# VC units (right side of map)
 	_spawn_unit(Vector2i(2, -1), Globals.Team.VC, Globals.UnitType.RIFLEMAN)
@@ -59,13 +63,28 @@ func _spawn_starting_units() -> void:
 	_spawn_unit(Vector2i(2,  1), Globals.Team.VC, Globals.UnitType.RIFLEMAN)
 	_spawn_unit(Vector2i(3,  0), Globals.Team.VC, Globals.UnitType.MACHINE_GUNNER)
 
-func _spawn_unit(hex: Vector2i, team: int, unit_type: int) -> Node:
+func _spawn_player_patrol() -> void:
+	var patrol_slots: Array[Vector2i] = [
+		Vector2i(-4, 0),
+		Vector2i(-4, 1),
+		Vector2i(-3, -1),
+		Vector2i(-3, 0),
+		Vector2i(-3, 1),
+		Vector2i(-2, 0),
+	]
+	var patrol: Array[Soldier] = Campaign.create_patrol(patrol_slots.size())
+	for i in range(min(patrol.size(), patrol_slots.size())):
+		var soldier: Soldier = patrol[i]
+		_spawn_unit(patrol_slots[i], Globals.Team.US, soldier.primary_role, soldier)
+
+func _spawn_unit(hex: Vector2i, team: int, unit_type: int, soldier: Soldier = null) -> Node:
 	var unit_scene: PackedScene = preload("res://scenes/Unit.tscn")
 	var unit: Node = unit_scene.instantiate()
 	unit.team = team
 	unit.unit_type = unit_type
 	add_child(unit)
 	unit.setup_from_type()
+	unit.assign_soldier(soldier)
 	hex_grid.place_unit(unit, hex)
 	unit.unit_clicked.connect(_on_unit_clicked)
 	unit.unit_died.connect(_on_unit_died)
@@ -102,9 +121,8 @@ func _on_hex_clicked(hex: Vector2i) -> void:
 		return
 
 	if action_mode == "move" and selected_unit != null:
-		if unit_at_hex == null:
-			_try_move(selected_unit, hex)
-	elif unit_at_hex == null:
+		_try_move(selected_unit, hex)
+	else:
 		_deselect()
 
 # ─── Selection ────────────────────────────────────────────────────────────────
@@ -217,10 +235,13 @@ func _on_enemy_turn_complete() -> void:
 	game_manager.start_next_turn()
 
 func _on_unit_died(unit: Node) -> void:
+	if unit.team == Globals.Team.US:
+		Campaign.mark_casualty(unit)
 	hex_grid.remove_unit(unit)
 	game_manager.register_unit_death(unit)
 
 func _on_game_over(player_won: bool) -> void:
+	Campaign.complete_mission(game_manager.player_units, player_won)
 	ui_manager.show_game_over(player_won)
 
 func _get_affordable_move_cells(unit: Node) -> Array[Vector2i]:

@@ -32,6 +32,7 @@ var current_movement: int
 var has_attacked: bool = false
 var is_fortified: bool = false
 var hex_position: Vector2i
+var soldier: Soldier = null
 
 # ─── Node refs ────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,33 @@ func setup_from_type() -> void:
 	current_health  = max_health
 	current_movement = max_movement
 	_refresh_display()
+
+func assign_soldier(soldier_data: Soldier) -> void:
+	soldier = soldier_data
+	if soldier == null:
+		return
+	unit_display_name = soldier.full_name()
+	max_movement = max(1, max_movement + soldier.get_movement_modifier())
+	attack_power = max(1, attack_power + soldier.get_attack_modifier())
+	current_health = max_health
+	current_movement = max_movement
+	_refresh_display()
+
+func get_soldier() -> Soldier:
+	return soldier
+
+func get_portrait_color() -> Color:
+	if soldier == null:
+		return Color(0.18, 0.18, 0.18, 1.0)
+	var palette := [
+		Color(0.46, 0.35, 0.28),
+		Color(0.58, 0.42, 0.31),
+		Color(0.71, 0.56, 0.43),
+		Color(0.33, 0.24, 0.18),
+		Color(0.62, 0.5, 0.41),
+		Color(0.4, 0.3, 0.22),
+	]
+	return palette[soldier.portrait_id % palette.size()]
 
 # ─── Display ──────────────────────────────────────────────────────────────────
 

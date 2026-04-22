@@ -6,6 +6,10 @@
 extends Resource
 class_name Soldier
 
+const TRAIT_HARDENED := "Hardened"
+const TRAIT_SHAKEN := "Shaken"
+const TRAIT_SHORT_TIMER := "Short-Timer"
+
 # ─── Identity ─────────────────────────────────────────────────────────────────
 
 @export var first_name: String = ""
@@ -14,19 +18,20 @@ class_name Soldier
 @export var rank: String = "Pvt."
 @export var backstory: String = ""
 @export var missions_survived: int = 0
+@export var missions_deployed: int = 0
 @export var kills: int = 0
 @export var times_wounded: int = 0
+@export var experience: int = 0
+@export var portrait_id: int = 0
+@export var primary_role: int = Globals.UnitType.RIFLEMAN
 
 # ─── Traits (earned through play) ─────────────────────────────────────────────
 
 @export var traits: Array[String] = []
 # Possible values:
-# "Steady"     — survived ambush, morale loss reduced
-# "Hardened"   — 3+ kills, +1 attack, -1 max morale (permanent)
-# "Grateful"   — healed in field, heals faster
-# "Shaken"     — watched squadmate die, morale penalty
-# "Vengeful"   — watched squadmate die, +1 attack vs enemies near death site
-# "Short-Timer"— 8+ missions, survival bonus but morale penalty
+# "Hardened"   — 3+ kills, +1 attack, -1 morale
+# "Shaken"     — low morale, reduced combat effectiveness
+# "Short-Timer"— 8+ missions, survival stress penalty
 
 # ─── Wound State ──────────────────────────────────────────────────────────────
 
@@ -71,26 +76,30 @@ func is_available() -> bool:
 func morale_ok() -> bool:
 	return morale > 2
 
+func experience_label() -> String:
+	if experience >= 12:
+		return "Veteran"
+	if experience >= 6:
+		return "Experienced"
+	return "Green"
+
 # ─── Stat Modifiers from Traits ───────────────────────────────────────────────
 
 func get_movement_modifier() -> int:
 	var mod := 0
-	if "Shaken" in traits:      mod -= 1
-	if "Short-Timer" in traits: mod += 0  # no movement change
+	if TRAIT_SHAKEN in traits: mod -= 1
 	return mod
 
 func get_attack_modifier() -> int:
 	var mod := 0
-	if "Hardened" in traits:  mod += 1
-	if "Vengeful" in traits:  mod += 1
-	if "Shaken" in traits:    mod -= 1
+	if TRAIT_HARDENED in traits: mod += 1
+	if TRAIT_SHAKEN in traits: mod -= 1
 	return mod
 
 func get_morale_modifier() -> int:
 	var mod := 0
-	if "Hardened" in traits:    mod -= 1   # costs something
-	if "Short-Timer" in traits: mod -= 1
-	if "Steady" in traits:      mod += 1
+	if TRAIT_HARDENED in traits: mod -= 1
+	if TRAIT_SHORT_TIMER in traits: mod -= 1
 	return mod
 
 # ─── Trait Acquisition ────────────────────────────────────────────────────────
@@ -105,15 +114,15 @@ func check_earned_traits() -> Array[String]:
 	## Call after each mission. Returns list of narrative strings for new traits.
 	var new_events: Array[String] = []
 
-	if kills >= 3 and "Hardened" not in traits:
-		new_events.append(add_trait("Hardened"))
+	if kills >= 3 and TRAIT_HARDENED not in traits:
+		new_events.append(add_trait(TRAIT_HARDENED))
 
-	if missions_survived >= 8 and "Short-Timer" not in traits:
-		new_events.append(add_trait("Short-Timer"))
+	if missions_survived >= 8 and TRAIT_SHORT_TIMER not in traits:
+		new_events.append(add_trait(TRAIT_SHORT_TIMER))
 		new_events.append("%s is getting short. Everyone knows it." % full_name())
 
-	if morale <= 1 and "Shaken" not in traits:
-		new_events.append(add_trait("Shaken"))
+	if morale <= 1 and TRAIT_SHAKEN not in traits:
+		new_events.append(add_trait(TRAIT_SHAKEN))
 
 	return new_events
 
