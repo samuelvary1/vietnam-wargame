@@ -149,7 +149,7 @@ func _spawn_player_patrol() -> void:
 		_spawn_unit(patrol_slots[i], Globals.Team.US, soldier.primary_role, soldier)
 
 func _consume_selected_patrol(size: int) -> Array[Soldier]:
-	var patrol: Array[Soldier] = selected_patrol
+	var patrol: Array[Soldier] = selected_patrol.duplicate()
 	if patrol.is_empty():
 		patrol = Campaign.create_patrol(size)
 	selected_patrol.clear()
