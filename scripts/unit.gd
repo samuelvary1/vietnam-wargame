@@ -79,15 +79,7 @@ func get_soldier() -> Soldier:
 func get_portrait_color() -> Color:
 	if soldier == null:
 		return Color(0.18, 0.18, 0.18, 1.0)
-	var palette := [
-		Color(0.46, 0.35, 0.28),
-		Color(0.58, 0.42, 0.31),
-		Color(0.71, 0.56, 0.43),
-		Color(0.33, 0.24, 0.18),
-		Color(0.62, 0.5, 0.41),
-		Color(0.4, 0.3, 0.22),
-	]
-	return palette[soldier.portrait_id % palette.size()]
+	return Globals.portrait_color(soldier.portrait_id)
 
 # ─── Display ──────────────────────────────────────────────────────────────────
 

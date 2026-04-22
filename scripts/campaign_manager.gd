@@ -17,8 +17,6 @@ func _build_initial_platoon() -> void:
 	roster.clear()
 	for role in _historical_platoon_roles():
 		var soldier := SoldierGenerator.generate(role)
-		soldier.primary_role = role
-		soldier.portrait_id = randi() % 12
 		roster.append(soldier)
 
 func _historical_platoon_roles() -> Array[int]:

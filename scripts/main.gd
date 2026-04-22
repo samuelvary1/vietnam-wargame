@@ -5,6 +5,11 @@
 
 extends Node2D
 
+const SCENE_SPLASH := preload("res://scenes/SplashScreen.tscn")
+const SCENE_MAIN_MENU := preload("res://scenes/MainMenu.tscn")
+const SCENE_ROSTER_SELECTION := preload("res://scenes/RosterSelection.tscn")
+const SCENE_UNIT := preload("res://scenes/Unit.tscn")
+
 # ─── Node refs ────────────────────────────────────────────────────────────────
 
 @onready var hex_grid: TileMapLayer   = $HexGrid
@@ -28,12 +33,12 @@ func _ready() -> void:
 	_show_splash()
 
 func _show_splash() -> void:
-	var splash := preload("res://scenes/SplashScreen.tscn").instantiate()
+	var splash := SCENE_SPLASH.instantiate()
 	add_child(splash)
 	splash.splash_finished.connect(_show_main_menu)
 
 func _show_main_menu() -> void:
-	menu_layer = preload("res://scenes/MainMenu.tscn").instantiate() as MainMenu
+	menu_layer = SCENE_MAIN_MENU.instantiate() as MainMenu
 	add_child(menu_layer)
 	menu_layer.new_game_requested.connect(_on_new_game_requested)
 	menu_layer.load_game_requested.connect(_on_load_game_requested)
@@ -41,12 +46,12 @@ func _show_main_menu() -> void:
 
 func _on_new_game_requested() -> void:
 	Campaign.ensure_campaign_started()
-	_show_roster_selection()
+	_open_roster_selection()
 
 func _on_load_game_requested() -> void:
 	if FileAccess.file_exists("user://campaign.save"):
 		Campaign.ensure_campaign_started()
-		_show_roster_selection()
+		_open_roster_selection()
 		return
 	if menu_layer != null:
 		menu_layer.show_status("No save file found yet. Start a new game.")
@@ -54,12 +59,10 @@ func _on_load_game_requested() -> void:
 func _on_exit_requested() -> void:
 	get_tree().quit()
 
-func _show_roster_selection() -> void:
-	if menu_layer != null:
-		menu_layer.queue_free()
-		menu_layer = null
+func _open_roster_selection() -> void:
+	_close_main_menu()
 
-	roster_layer = preload("res://scenes/RosterSelection.tscn").instantiate() as RosterSelection
+	roster_layer = SCENE_ROSTER_SELECTION.instantiate() as RosterSelection
 	add_child(roster_layer)
 	roster_layer.deploy_confirmed.connect(_on_roster_deploy_confirmed)
 	roster_layer.cancel_requested.connect(_on_roster_cancel_requested)
@@ -67,21 +70,32 @@ func _show_roster_selection() -> void:
 
 func _on_roster_deploy_confirmed(selection: Array) -> void:
 	selected_patrol = Campaign.confirm_patrol(selection)
-	if roster_layer != null:
-		roster_layer.queue_free()
-		roster_layer = null
+	_close_roster_selection()
 	_start_game()
 
 func _on_roster_cancel_requested() -> void:
-	if roster_layer != null:
-		roster_layer.queue_free()
-		roster_layer = null
+	_close_roster_selection()
 	_show_main_menu()
+
+func _close_main_menu() -> void:
+	if menu_layer == null:
+		return
+	menu_layer.queue_free()
+	menu_layer = null
+
+func _close_roster_selection() -> void:
+	if roster_layer == null:
+		return
+	roster_layer.queue_free()
+	roster_layer = null
 
 func _start_game() -> void:
 	if game_started:
 		return
 	game_started = true
+	_bootstrap_mission()
+
+func _bootstrap_mission() -> void:
 	ui_manager.visible = true
 	Campaign.ensure_campaign_started()
 	_connect_signals()
@@ -111,7 +125,9 @@ func _connect_signals() -> void:
 
 func _spawn_starting_units() -> void:
 	_spawn_player_patrol()
+	_spawn_enemy_force()
 
+func _spawn_enemy_force() -> void:
 	# VC units (right side of map)
 	_spawn_unit(Vector2i(2, -1), Globals.Team.VC, Globals.UnitType.RIFLEMAN)
 	_spawn_unit(Vector2i(2,  0), Globals.Team.VC, Globals.UnitType.RIFLEMAN)
@@ -127,17 +143,20 @@ func _spawn_player_patrol() -> void:
 		Vector2i(-3, 1),
 		Vector2i(-2, 0),
 	]
-	var patrol: Array[Soldier] = selected_patrol
-	if patrol.is_empty():
-		patrol = Campaign.create_patrol(patrol_slots.size())
-	selected_patrol.clear()
+	var patrol: Array[Soldier] = _consume_selected_patrol(patrol_slots.size())
 	for i in range(min(patrol.size(), patrol_slots.size())):
 		var soldier: Soldier = patrol[i]
 		_spawn_unit(patrol_slots[i], Globals.Team.US, soldier.primary_role, soldier)
 
+func _consume_selected_patrol(size: int) -> Array[Soldier]:
+	var patrol: Array[Soldier] = selected_patrol
+	if patrol.is_empty():
+		patrol = Campaign.create_patrol(size)
+	selected_patrol.clear()
+	return patrol
+
 func _spawn_unit(hex: Vector2i, team: int, unit_type: int, soldier: Soldier = null) -> Node:
-	var unit_scene: PackedScene = preload("res://scenes/Unit.tscn")
-	var unit: Node = unit_scene.instantiate()
+	var unit: Node = SCENE_UNIT.instantiate()
 	unit.team = team
 	unit.unit_type = unit_type
 	add_child(unit)
