@@ -55,6 +55,27 @@ func create_patrol(size: int = PATROL_SIZE) -> Array[Soldier]:
 
 	return patrol
 
+func get_available_soldiers() -> Array[Soldier]:
+	return _available_soldiers()
+
+func confirm_patrol(selection: Array[Soldier]) -> Array[Soldier]:
+	var patrol: Array[Soldier] = []
+	for soldier in selection:
+		if soldier == null:
+			continue
+		if not soldier.is_available() or soldier.wound_state == "kia":
+			continue
+		if soldier in patrol:
+			continue
+		patrol.append(soldier)
+		if patrol.size() >= PATROL_SIZE:
+			break
+
+	for soldier in patrol:
+		soldier.missions_deployed += 1
+
+	return patrol
+
 func mark_casualty(unit: Node) -> void:
 	if unit == null or not unit.has_method("get_soldier"):
 		return

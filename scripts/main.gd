@@ -16,18 +16,73 @@ extends Node2D
 
 var selected_unit: Node = null
 var action_mode: String = ""   # "move" | "attack" | ""
+var game_started: bool = false
+var menu_layer: MainMenu = null
+var roster_layer: RosterSelection = null
+var selected_patrol: Array[Soldier] = []
 
 # ─── Init ─────────────────────────────────────────────────────────────────────
 
 func _ready() -> void:
+	ui_manager.visible = false
 	_show_splash()
 
 func _show_splash() -> void:
 	var splash := preload("res://scenes/SplashScreen.tscn").instantiate()
 	add_child(splash)
-	splash.splash_finished.connect(_start_game)
+	splash.splash_finished.connect(_show_main_menu)
+
+func _show_main_menu() -> void:
+	menu_layer = preload("res://scenes/MainMenu.tscn").instantiate() as MainMenu
+	add_child(menu_layer)
+	menu_layer.new_game_requested.connect(_on_new_game_requested)
+	menu_layer.load_game_requested.connect(_on_load_game_requested)
+	menu_layer.exit_requested.connect(_on_exit_requested)
+
+func _on_new_game_requested() -> void:
+	Campaign.ensure_campaign_started()
+	_show_roster_selection()
+
+func _on_load_game_requested() -> void:
+	if FileAccess.file_exists("user://campaign.save"):
+		Campaign.ensure_campaign_started()
+		_show_roster_selection()
+		return
+	if menu_layer != null:
+		menu_layer.show_status("No save file found yet. Start a new game.")
+
+func _on_exit_requested() -> void:
+	get_tree().quit()
+
+func _show_roster_selection() -> void:
+	if menu_layer != null:
+		menu_layer.queue_free()
+		menu_layer = null
+
+	roster_layer = preload("res://scenes/RosterSelection.tscn").instantiate() as RosterSelection
+	add_child(roster_layer)
+	roster_layer.deploy_confirmed.connect(_on_roster_deploy_confirmed)
+	roster_layer.cancel_requested.connect(_on_roster_cancel_requested)
+	roster_layer.populate(Campaign.get_available_soldiers())
+
+func _on_roster_deploy_confirmed(selection: Array) -> void:
+	selected_patrol = Campaign.confirm_patrol(selection)
+	if roster_layer != null:
+		roster_layer.queue_free()
+		roster_layer = null
+	_start_game()
+
+func _on_roster_cancel_requested() -> void:
+	if roster_layer != null:
+		roster_layer.queue_free()
+		roster_layer = null
+	_show_main_menu()
 
 func _start_game() -> void:
+	if game_started:
+		return
+	game_started = true
+	ui_manager.visible = true
 	Campaign.ensure_campaign_started()
 	_connect_signals()
 	_spawn_starting_units()
@@ -72,7 +127,10 @@ func _spawn_player_patrol() -> void:
 		Vector2i(-3, 1),
 		Vector2i(-2, 0),
 	]
-	var patrol: Array[Soldier] = Campaign.create_patrol(patrol_slots.size())
+	var patrol: Array[Soldier] = selected_patrol
+	if patrol.is_empty():
+		patrol = Campaign.create_patrol(patrol_slots.size())
+	selected_patrol.clear()
 	for i in range(min(patrol.size(), patrol_slots.size())):
 		var soldier: Soldier = patrol[i]
 		_spawn_unit(patrol_slots[i], Globals.Team.US, soldier.primary_role, soldier)
