@@ -16,6 +16,11 @@ const SCENE_UNIT := preload("res://scenes/Unit.tscn")
 @onready var game_manager: Node       = $GameManager
 @onready var ui_manager: CanvasLayer  = $UIManager
 @onready var enemy_ai: Node           = $EnemyAI
+@onready var camera_2d: Camera2D      = $Camera2D
+
+const ZOOM_STEP: float = 0.05
+const ZOOM_MIN: float = 0.7
+const ZOOM_MAX: float = 1.2
 
 # ─── Action state ─────────────────────────────────────────────────────────────
 
@@ -311,6 +316,13 @@ func _on_ap_changed(ap: int) -> void:
 func _on_enemy_turn_complete() -> void:
 	game_manager.start_next_turn()
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_adjust_zoom(-ZOOM_STEP)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_adjust_zoom(ZOOM_STEP)
+
 func _on_unit_died(unit: Node) -> void:
 	if unit.team == Globals.Team.US:
 		Campaign.mark_casualty(unit)
@@ -334,3 +346,9 @@ func _refresh_selected_unit_panel() -> void:
 	var can_attack_now: bool = selected_unit.can_attack() and game_manager.action_points >= 1
 	var can_fortify_now: bool = not selected_unit.is_fortified and game_manager.action_points >= 1
 	ui_manager.show_unit_panel(selected_unit, can_move_now, can_attack_now, can_fortify_now)
+
+func _adjust_zoom(delta: float) -> void:
+	if camera_2d == null:
+		return
+	var target_zoom: float = clamp(camera_2d.zoom.x + delta, ZOOM_MIN, ZOOM_MAX)
+	camera_2d.zoom = Vector2(target_zoom, target_zoom)
